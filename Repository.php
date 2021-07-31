@@ -1,7 +1,8 @@
 <?php
-
-
-
+/**
+ * @author emrdev
+ * @author emrdev.ru <emrdev@outlook.com>
+ */
 class Repository
 {
     /** @var PDO $pdo */
