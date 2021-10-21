@@ -20,6 +20,18 @@ class Repository
     }
 
     /**
+     * @param mixed $primary
+     */
+    public function setPrimary($primary)
+    {
+        $this->primary = $primary;
+        return $this;
+    }
+     
+
+
+
+    /**
      * Entity name
      * @return Repository
      */
@@ -44,23 +56,36 @@ class Repository
 
     public function findBy(array $parameters = [],$start = null, $limit = null){
         $sql = "SELECT * FROM {$this->manager} WHERE ";
+        $values = '';
         foreach ($parameters as $key => $param){
-            $sql .="{$key} = :$key ";
+            if($values){
+                $values .= 'AND ';
+            }
+            $values .="{$key} = :$key ";
+        }
+        $sql.=$values;
+
+        if($limit){
+            $sql .= " LIMIT :limit ";
+            $parameters['limit'] = $limit;
         }
         if($start){
-            $sql .= "OFFSET :$start ";
-        }
-        if($limit){
-            $sql .= "LIMIT :$limit ";
-        }
+            $sql .= " OFFSET :start ";
+            $parameters['start'] = $start;
+        }  
         return $this->query($sql,$parameters);
     }
 
     public function findOneBy(array $parameters = [],$start = null, $limit = null){
         $sql = "SELECT * FROM {$this->manager} WHERE ";
+        $values = '';
         foreach ($parameters as $key => $param){
-            $sql .="{$key} = :$key ";
+            if($values){
+                $values .= 'AND ';
+            }
+            $values .="{$key} = :$key ";
         }
+        $sql .=$values;
         if($start){
             $sql .= "OFFSET :offset ";
             $parameters['offset'] = $start;
@@ -72,11 +97,44 @@ class Repository
         return $this->single_query($sql,$parameters);
     }
 
-    public function insert(){}
+    public function insert(array $parameters = []){
+        $sql = "INSERT INTO {$this->manager} SET ";
+        $values = '';
+        foreach ($parameters as $key => $param){
+            if($values){
+                $values .=', ';
+            }
+            $values .="{$key} = :$key ";
+        }
+        $sql .= $values;
 
-    public function update(){}
+        return $this->single_query($sql,$parameters);
+    }
 
-    public function remove(){}
+    public function update(array $parameters = [],$id){
+        $sql = "UPDATE  {$this->manager} SET ";
+        $values = '';
+        foreach ($parameters as $key => $param){
+            if($values){
+                $values .=', ';
+            }
+            $values .="{$key} = :$key ";
+        }
+        $sql .= $values;
+        $sql .= "  WHERE {$this->primary} = :id";
+        $parameters['id'] = $id;
+        return $this->single_query($sql,$parameters);
+    }
+    public function remove($id){
+        $sql = "DELETE  FROM {$this->manager}  WHERE {$this->primary} = :id";
+        $parameters['id'] = $id; 
+        return $this->single_query($sql,$parameters);
+    }
+
+    public function removeAll(){
+        $sql = "DELETE  FROM {$this->manager}";
+        return $this->single_query($sql);
+    }
 
     public function query(string $sql, array $parameters = []){
         $stmt = $this->pdo->prepare($sql);
@@ -87,6 +145,7 @@ class Repository
     public function single_query(string $sql, array $parameters = []){
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($parameters);
+
         return $stmt->fetch($this->fetch_mode);
     }
 
@@ -99,11 +158,11 @@ class Repository
     }
 
     private function connection(){
-          $options = [
+        $options = [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES   => false,
         ];
-        $this->pdo = new PDO(REPOSITORY_PDO.":host=".REPOSITORY_HOST.";dbname=".REPOSITORY_DBNAME.";charset=".REPOSITORY_CHARSET,REPOSITORY_USER, REPOSITORY_PASSWORD,$options);
+        $this->pdo = new PDO("mysql:host=".DB_HOSTNAME.";dbname=".DB_DATABASE.";charset=utf8",DB_USERNAME, DB_PASSWORD,$options);
     }
 }
